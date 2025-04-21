@@ -1,9 +1,15 @@
-# NHKニュースデジタルサイネージシステム
+# NHKニュースデジタルサイネージシステム(Digital Signage System for NHK News)
 
 このリポジトリには、NHKのRSSフィードからニュースを取得し、デジタルサイネージとして表示するためのアプリケーションが含まれています。システムは2つの主要コンポーネントで構成されています：
 
+This repository contains an application for fetching news from NHK's RSS feeds and displaying it as digital signage. The system consists of two main components:
+
 1. **データ収集アプリケーション**: PythonスクリプトがNHKのRSSフィードからニュースを取得し、PostgreSQLデータベースに保存します
 2. **表示アプリケーション**: PHPスクリプトがデータベースからニュースを読み取り、ウェブブラウザベースのデジタルサイネージとして表示します
+
+-
+1. **Data Collection Application**: A Python script that fetches news from NHK's RSS feeds and stores it in a PostgreSQL database.
+2. **Display Application**: A PHP script that reads news from the database and displays it as web browser-based digital signage.
 
 ## 機能
 
