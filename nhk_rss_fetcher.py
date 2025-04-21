@@ -79,10 +79,21 @@ def fetch_rss_feed(url: str) -> Dict[str, Any]:
         logger.error(f"RSSフィード取得エラー: {e}")
         raise
 
+def truncate_news_table(conn):
+    """news_itemsテーブルの全データを削除する"""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE TABLE news_items RESTART IDENTITY")
+            conn.commit()
+            logger.info("既存のニュースデータを削除しました")
+    except psycopg2.Error as e:
+        logger.error(f"テーブル削除エラー: {e}")
+        conn.rollback()
+        raise
+
 def save_entries_to_db(conn, entries: List[Dict[str, Any]]):
     """RSSエントリーをデータベースに保存する"""
     inserted_count = 0
-    updated_count = 0
     
     try:
         with conn.cursor() as cur:
@@ -93,7 +104,7 @@ def save_entries_to_db(conn, entries: List[Dict[str, Any]]):
                 else:
                     published_date = datetime.datetime.now()
                 
-                # ニュース記事をデータベースに挿入/更新
+                # ニュース記事をデータベースに挿入
                 try:
                     # すべてのテキストフィールドがUnicode文字列であることを確認
                     guid = str(entry.get('id', entry.get('link', '')))
@@ -104,14 +115,6 @@ def save_entries_to_db(conn, entries: List[Dict[str, Any]]):
                     cur.execute('''
                     INSERT INTO news_items (guid, title, link, description, published_date)
                     VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (guid) 
-                    DO UPDATE SET 
-                        title = EXCLUDED.title,
-                        link = EXCLUDED.link,
-                        description = EXCLUDED.description,
-                        published_date = EXCLUDED.published_date,
-                        fetched_at = CURRENT_TIMESTAMP
-                    RETURNING (xmax = 0) AS is_insert
                     ''', (
                         guid,
                         title,
@@ -120,11 +123,7 @@ def save_entries_to_db(conn, entries: List[Dict[str, Any]]):
                         published_date
                     ))
                     
-                    is_insert = cur.fetchone()[0]
-                    if is_insert:
-                        inserted_count += 1
-                    else:
-                        updated_count += 1
+                    inserted_count += 1
                         
                 except psycopg2.Error as e:
                     logger.error(f"エントリー保存エラー: {e}, エントリー: {entry.get('title', '')}")
@@ -135,7 +134,7 @@ def save_entries_to_db(conn, entries: List[Dict[str, Any]]):
                     continue
             
             conn.commit()
-            logger.info(f"保存完了: {inserted_count}件の新規エントリーを追加、{updated_count}件を更新")
+            logger.info(f"保存完了: {inserted_count}件のエントリーを保存しました")
     except psycopg2.Error as e:
         logger.error(f"データベース操作エラー: {e}")
         conn.rollback()
@@ -144,17 +143,26 @@ def save_entries_to_db(conn, entries: List[Dict[str, Any]]):
 def main():
     """
     メイン実行関数 - 1回だけ実行してプログラム終了
+    1. テーブルが存在しなければ作成
+    2. 既存のデータをすべて削除
+    3. 新しいデータを挿入
     """
-    logger.info("NHKニュースRSS取得・保存スクリプトを開始します（1回実行モード）")
+    logger.info("NHKニュースRSS取得・保存スクリプトを開始します（データ入れ替えモード）")
     
     try:
         conn = get_db_connection()
+        
+        # テーブルが存在することを確認（なければ作成）
         create_tables(conn)
         
+        # 既存データをすべて削除
+        truncate_news_table(conn)
+        
+        # 新しいデータを取得して保存
         feed = fetch_rss_feed(NHK_RSS_URL)
         save_entries_to_db(conn, feed.entries)
         
-        logger.info("処理が完了しました")
+        logger.info("データの入れ替えが完了しました")
     except Exception as e:
         logger.error(f"処理中にエラーが発生しました: {e}")
         return 1  # エラー終了
