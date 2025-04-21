@@ -37,10 +37,7 @@ cd nhk-news-signage
 ```
 
 ### 2. Pythonの依存パッケージをインストール
-
-```bash
-pip install -r requirements.txt
-```
+debian系の場合は venv 環境でないとインストールできないかもしれません
 
 ### 3. データベースを設定
 
