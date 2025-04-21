@@ -45,7 +45,7 @@ function fetchNews($db_config, $limit = 5) {
         // PDO接続の確立
         $pdo = new PDO($dsn);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo->exec("SET NAMES UTF8");
+//        $pdo->exec("SET NAMES UTF8");
         
         // 最新のニュース記事を取得
         $stmt = $pdo->prepare("
